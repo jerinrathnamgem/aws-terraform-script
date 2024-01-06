@@ -259,9 +259,9 @@ module "eks-pipeline" {
 }
 
 resource "aws_ecr_repository" "this" {
-  count = var.create_eks_deployment ? length(var.ecs_service_names) : 0
+  count = var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
 
-  name                 = lower(var.ecs_service_names[count.index])
+  name                 = lower(var.eks_pipeline_names[count.index])
   force_delete         = true
   image_tag_mutability = "MUTABLE"
 
@@ -270,7 +270,7 @@ resource "aws_ecr_repository" "this" {
   }
 
   tags = {
-    "Name" = var.ecs_service_names[count.index]
+    "Name" = var.eks_pipeline_names[count.index]
   }
 }
 
