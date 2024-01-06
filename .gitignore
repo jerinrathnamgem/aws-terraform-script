@@ -1,0 +1,5 @@
+.terraform*
+.infracost
+*.bk
+*tfvars
+*tfstate*

@@ -1,0 +1,43 @@
+---
+version: 0.2
+env:
+  secrets-manager:
+    USERNAME: $SECRET_USERNAME
+    PASSWORD: $SECRET_PASSWORD
+
+phases:
+  pre_build:
+    commands:
+      - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
+      - sed -i 's@NAMESPACE@'"$NS"'@' deployment.yml
+      - sed -i 's@CONTAINERPORT@'"$CONTAINER_PORT"'@' deployment.yml
+      - aws --version
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - echo logging in to Docker Registry
+      - docker login -u ${USERNAME} -p ${PASSWORD}
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - sed -i 's@IMAGE@'"$REPOSITORY_URI:$IMAGE_TAG"'@' deployment.yml
+        
+  post_build:
+    commands:
+      - export KUBECONFIG=$HOME/.kube/config
+      - export CREDENTIALS=$(aws sts assume-role --role-arn $EKS_KUBECTL_ROLE_ARN --role-session-name codebuild-kubectl --duration-seconds 900)
+      - export AWS_ACCESS_KEY_ID="$(echo ${CREDENTIALS} | jq -r '.Credentials.AccessKeyId')"
+      - export AWS_SECRET_ACCESS_KEY="$(echo ${CREDENTIALS} | jq -r '.Credentials.SecretAccessKey')"
+      - export AWS_SESSION_TOKEN="$(echo ${CREDENTIALS} | jq -r '.Credentials.SessionToken')"
+      - export AWS_EXPIRATION=$(echo ${CREDENTIALS} | jq -r '.Credentials.Expiration')
+      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+      - kubectl apply -f deployment.yml
