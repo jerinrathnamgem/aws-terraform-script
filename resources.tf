@@ -93,18 +93,18 @@ resource "aws_route53_record" "this" {
 
   zone_id = length(var.route53_zone_ids) > 1 ? var.route53_zone_ids[count.index] : var.route53_zone_ids[0]
   name    = var.route53_record_names[count.index]
-  type    = "CNAME"
+  type    = var.load_balancer_name != null ? "CNAME" : "A"
   ttl     = 300
-  records = [one(module.load-balancer[*].dns_name)]
+  records =  var.load_balancer_name != null ? [one(module.load-balancer[*].dns_name)] : [one(module.ec2[*].public_ip)]
 }
 
 ######################### PIPELINE ALERTS ################################
 
 resource "aws_codestarnotifications_notification_rule" "this" {
-  count = var.create_ecs_deployment ? length(var.ecs_service_names) : var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
+  count = var.create_ecs_deployment ? length(var.ecs_service_names) : var.create_eks_deployment ? length(var.eks_pipeline_names) : 1
 
   detail_type = "FULL"
-  name        = "${var.create_ecs_deployment ? var.ecs_service_names[count.index] : var.eks_pipeline_names[count.index]}-pipeline-notification"
+  name        = "${var.create_ecs_deployment ? var.ecs_service_names[count.index] : var.create_eks_deployment ? var.eks_pipeline_names[count.index] : var.ec2_name}-pipeline-notification"
   resource    = var.create_ecs_deployment ? module.ecs-pipeline[count.index].code_pipeline_arn : (var.create_ec2_deployment ? module.ec2-pipeline[0].code_pipeline_arn : module.eks-pipeline[count.index].code_pipeline_arn)
 
   event_type_ids = [

@@ -52,6 +52,18 @@ variable "node_desired_size" {
   default     = 2
 }
 
+variable "node_private_key_name" {
+  type        = string
+  description = "Enter the name of the Key-Pair for EKS Node Group"
+  default     = null
+}
+
+variable "node_ssh_cidr_ips" {
+  type        = list(string)
+  description = "list of ssh IPs for EKS Node group"
+  default     = ["0.0.0.0/0"]
+}
+
 variable "cluster_endpoint_private_access" {
   type        = string
   description = "Whether the Amazon EKS private API server endpoint is enabled."
