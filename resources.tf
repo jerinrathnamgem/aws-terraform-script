@@ -95,7 +95,7 @@ resource "aws_route53_record" "this" {
   name    = var.route53_record_names[count.index]
   type    = var.load_balancer_name != null ? "CNAME" : "A"
   ttl     = 300
-  records =  var.load_balancer_name != null ? [one(module.load-balancer[*].dns_name)] : [one(module.ec2[*].public_ip)]
+  records = var.load_balancer_name != null ? [one(module.load-balancer[*].dns_name)] : [one(module.ec2[*].public_ip)]
 }
 
 ######################### PIPELINE ALERTS ################################
@@ -269,6 +269,7 @@ resource "helm_release" "kubernetes_dashboard" {
   values = [
     templatefile("./kube-dashboard.yml.tpl", { #${path.module}
       service_account_name = "kube-dashboard-sa"
+      service_type         = var.kubernetes_dashboard_service_type
     })
   ]
 }

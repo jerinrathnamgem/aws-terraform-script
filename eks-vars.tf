@@ -105,3 +105,9 @@ variable "eks_node_subnet_ids" {
   description = "list of subnet ids for EKS Node group"
   default     = null
 }
+
+variable "kubernetes_dashboard_service_type" {
+  type        = string
+  description = "Enter the type of the service for kubernetes dashboard. Valid values are: 'NodePort', 'ClusterIP', 'LoadBalancer'"
+  default     = "NodePort"
+}

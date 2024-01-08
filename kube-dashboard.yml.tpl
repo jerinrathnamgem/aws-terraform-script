@@ -1,6 +1,6 @@
 protocolHttp: true
 service:
-  type: NodePort
+  type: ${service_type}
   # Dashboard service port
   externalPort: 80
   annotations: {

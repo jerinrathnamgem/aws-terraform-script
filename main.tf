@@ -47,7 +47,7 @@ module "security-group-ecs" {
   name                                  = "${var.ecs_service_names[count.index]}-ECS"
   vpc_id                                = var.vpc_id
   tcp_ports                             = [var.ecs_ports[count.index]]
-  ingress_tcp_source_security_group_ids =  var.load_balancer_name != null ? [one(module.security-group-lb[*].security_group_id)] : []
+  ingress_tcp_source_security_group_ids = var.load_balancer_name != null ? [one(module.security-group-lb[*].security_group_id)] : []
 }
 
 ##################### EC2 INSTANCE #####################
@@ -78,7 +78,7 @@ module "security-group-ec2" {
   vpc_id                                = var.vpc_id
   myip_ssh                              = var.ssh_cidr_ips
   tcp_ports                             = [var.ec2_port]
-  ingress_tcp_source_security_group_ids =  var.load_balancer_name != null ? [one(module.security-group-lb[*].security_group_id)] : []
+  ingress_tcp_source_security_group_ids = var.load_balancer_name != null ? [one(module.security-group-lb[*].security_group_id)] : []
 }
 
 resource "time_sleep" "ec2" {
