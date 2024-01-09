@@ -36,7 +36,7 @@ resource "aws_s3_bucket_policy" "this" {
           Effect    = "Deny"
           Principal = "*"
           Resource = [
-            "arn:aws:s3:.::${local.s3_bucket}",
+            "arn:aws:s3:::${local.s3_bucket}",
             "arn:aws:s3:::${local.s3_bucket}/*"
 
           ]
