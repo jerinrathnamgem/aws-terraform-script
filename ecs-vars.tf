@@ -82,12 +82,12 @@ variable "task_env_vars" {
 }
 
 variable "task_env_files" {
-  type = list(object(
+  type = list(list(object(
     {
       type  = string,
       value = string
     }
-  ))
+  )))
   description = "A list of files containing the environment variables to pass to a container."
   default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_EnvironmentFile.html
 }
