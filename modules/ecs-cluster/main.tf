@@ -146,8 +146,10 @@ resource "aws_ecs_task_definition" "this" {
         essential = true
 
         command          = var.task_commands
+        credentialSpecs  = var.task_credential_specs
         entrypoint       = var.task_entry_points
         environmentFiles = var.task_env_files
+        environment      = var.task_env_vars
         healthCheck      = var.task_health_check
         hostname         = var.task_host_name
         mountPoints      = var.task_mount_point
@@ -162,8 +164,6 @@ resource "aws_ecs_task_definition" "this" {
             awslogs-stream-prefix = "ecs"
           }
         }
-
-        environment = var.task_env_vars
 
         portMappings = [
           {

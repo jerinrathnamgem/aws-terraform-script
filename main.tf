@@ -38,6 +38,17 @@ module "ecs" {
   task_cpu                  = var.task_cpu
   task_memory               = var.task_memory
   ignore_changes            = var.ignore_changes
+  task_env_vars             = var.task_env_vars
+  task_env_files            = var.task_env_files
+  task_max_capacity         = var.task_max_capacity
+  task_min_capacity         = var.task_min_capacity
+  task_commands             = var.task_commands
+  task_credential_specs     = var.task_credential_specs
+  task_entry_points         = var.task_entry_points
+  task_health_check         = var.task_health_check
+  task_mount_point          = var.task_mount_point
+  task_volume               = var.task_volume
+  task_volumes_from         = var.task_volumes_from
 }
 
 module "security-group-ecs" {

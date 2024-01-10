@@ -242,6 +242,12 @@ variable "task_cpu" {
   default     = [256]
 }
 
+variable "task_credential_specs" {
+  type        = list(string)
+  description = "A list of ARNs in SSM or Amazon S3 to a credential spec (CredSpec) file that configures the container for Active Directory authentication. We recommend that you use this parameter instead of the dockerSecurityOptions. The maximum number of ARNs is 1."
+  default     = null
+}
+
 variable "task_entry_points" {
   type        = list(string)
   description = "List of The entry points that's passed to the container"
@@ -249,13 +255,23 @@ variable "task_entry_points" {
 }
 
 variable "task_env_vars" {
-  type        = list(map(string))
+  type = list(object(
+    {
+      name  = string,
+      value = string
+    }
+  ))
   description = "List of key-value pair of environment variables for ecs task definition"
   default     = null
 }
 
 variable "task_env_files" {
-  type        = list(map(string))
+  type = list(object(
+    {
+      type  = string,
+      value = string
+    }
+  ))
   description = "A list of files containing the environment variables to pass to a container."
   default     = null
 }
