@@ -38,8 +38,8 @@ module "ecs" {
   task_cpu                  = var.task_cpu
   task_memory               = var.task_memory
   ignore_changes            = var.ignore_changes
-  task_env_vars             = var.task_env_vars
-  task_env_files            = var.task_env_files
+  task_env_vars             = var.task_env_vars[count.index]
+  task_env_files            = var.task_env_files[count.index]
   task_max_capacity         = var.task_max_capacity
   task_min_capacity         = var.task_min_capacity
   task_commands             = var.task_commands

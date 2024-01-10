@@ -59,15 +59,16 @@ variable "ecs_subnet_ids" {
 }
 
 variable "task_env_vars" {
-  type = list(object(
+  type = list(list(object(
     {
       name  = string,
       value = string
     }
-  ))
+  )))
   description = "List of key-value pair of environment variables for ecs task definition"
   default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_KeyValuePair.html
   # default = [
+  #  [
   #   {
   #     name  = "ENV1"
   #     value = "task1"
@@ -76,6 +77,7 @@ variable "task_env_vars" {
   #     name  = "ENV2"
   #     value = "task2"
   #   }
+  # ]
   # ]
 }
 
