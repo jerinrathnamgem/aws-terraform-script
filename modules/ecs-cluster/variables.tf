@@ -231,7 +231,7 @@ variable "tags" {
 }
 
 variable "task_commands" {
-  type        = list(string)
+  type        = list(list(string))
   description = "List of The commands that's passed to the container."
   default     = null
 }
@@ -243,65 +243,65 @@ variable "task_cpu" {
 }
 
 variable "task_credential_specs" {
-  type        = list(string)
+  type        = list(list(string))
   description = "A list of ARNs in SSM or Amazon S3 to a credential spec (CredSpec) file that configures the container for Active Directory authentication. We recommend that you use this parameter instead of the dockerSecurityOptions. The maximum number of ARNs is 1."
   default     = null
 }
 
 variable "task_entry_points" {
-  type        = list(string)
+  type        = list(list(string))
   description = "List of The entry points that's passed to the container"
   default     = null
 }
 
 variable "task_env_vars" {
-  type = list(object(
+  type = list(list(object(
     {
       name  = string,
       value = string
     }
-  ))
+  )))
   description = "List of key-value pair of environment variables for ecs task definition"
-  default     = null
+  default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_KeyValuePair.html
 }
 
 variable "task_env_files" {
-  type = list(object(
+  type = list(list(object(
     {
       type  = string,
       value = string
     }
-  ))
+  )))
   description = "A list of files containing the environment variables to pass to a container."
-  default     = null
+  default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_EnvironmentFile.html
 }
 
 variable "task_health_check" {
-  type        = map(any)
+  type        = list(map(any))
   description = "The container health check command and associated configuration parameters for the container."
   default     = null
 }
 
 variable "task_host_name" {
-  type        = string
+  type        = list(string)
   description = "The hostname to use for your container."
   default     = null
 }
 
 variable "task_mount_point" {
-  type        = list(map(any))
+  type        = list(list(map(any)))
   description = "The mount points for data volumes in your container."
   default     = null
 }
 
 variable "task_volume" {
-  type        = list(any)
+  type        = list(list(any))
   description = "Data volumes to mount from efs or docker or windows"
   default     = null
 }
 
 variable "task_volumes_from" {
-  type        = list(map(any))
+  type        = list(list(map(any)))
   description = "Data volumes to mount from another container"
   default     = null
 }

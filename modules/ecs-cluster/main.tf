@@ -145,16 +145,16 @@ resource "aws_ecs_task_definition" "this" {
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
 
-        command          = var.task_commands
-        credentialSpecs  = var.task_credential_specs
-        entrypoint       = var.task_entry_points
-        environmentFiles = var.task_env_files
-        environment      = var.task_env_vars
-        healthCheck      = var.task_health_check
-        hostname         = var.task_host_name
-        mountPoints      = var.task_mount_point
-        volumesFrom      = var.task_volumes_from
-        volume           = var.task_volume
+        command          = var.task_commands != null ? var.task_commands[count.index] : null
+        credentialSpecs  = var.task_credential_specs != null ? var.task_credential_specs[count.index] : null
+        entrypoint       = var.task_entry_points != null ? var.task_entry_points[count.index] : null
+        environmentFiles = var.task_env_files != null ? var.task_env_files[count.index] : null
+        environment      = var.task_env_vars != null ? var.task_env_vars[count.index] : null
+        healthCheck      = var.task_health_check != null ? var.task_health_check[count.index] : null
+        hostname         = var.task_host_name != null ? var.task_host_name[count.index] : null
+        mountPoints      = var.task_mount_point != null ? var.task_mount_point[count.index] : null
+        volumesFrom      = var.task_volumes_from != null ? var.task_volumes_from[count.index] : null
+        volume           = var.task_volume != null ? var.task_volume[count.index] : null
 
         logConfiguration = {
           logDriver = var.container_log_driver
