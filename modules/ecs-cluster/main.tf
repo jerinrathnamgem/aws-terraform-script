@@ -136,6 +136,34 @@ resource "aws_ecs_task_definition" "this" {
   network_mode             = var.network_mode
   requires_compatibilities = [var.task_launch_type]
 
+  dynamic "ephemeral_storage" {
+    for_each = length(var.task_ephemeral_storage) > 0 ? [1] : []
+
+    content {
+      size_in_gib = length(var.task_ephemeral_storage) > 0 ? var.task_ephemeral_storage[count.index] : null
+    }
+  }
+
+  dynamic "volume" {
+    for_each = length(var.task_volume) > 0 ? [1] : []
+
+    content {
+      efs_volume_configuration {
+        file_system_id          = var.task_volume[0]["file_system_id"][count.index]
+        transit_encryption      = var.task_volume[0]["transit_encryption"]
+        transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
+        #root_directory = var.task_volume[0]["root_directory"][count.index]
+        # authorization_config {
+        #   access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
+        #   iam             = var.task_volume[0]["authorization_config_iam"]
+        # }
+      }
+
+      name      = var.task_volume[0]["name"][count.index]
+      host_path = try(var.task_volume[0]["host_path"][count.index], null)
+    }
+  }
+
   container_definitions = jsonencode(
     [
       {
@@ -145,16 +173,20 @@ resource "aws_ecs_task_definition" "this" {
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
 
-        command          = var.task_commands != null ? var.task_commands[count.index] : null
-        credentialSpecs  = var.task_credential_specs != null ? var.task_credential_specs[count.index] : null
-        entrypoint       = var.task_entry_points != null ? var.task_entry_points[count.index] : null
-        environmentFiles = var.task_env_files != null ? var.task_env_files[count.index] : null
-        environment      = var.task_env_vars != null ? var.task_env_vars[count.index] : null
-        healthCheck      = var.task_health_check != null ? var.task_health_check[count.index] : null
-        hostname         = var.task_host_name != null ? var.task_host_name[count.index] : null
-        mountPoints      = var.task_mount_point != null ? var.task_mount_point[count.index] : null
-        volumesFrom      = var.task_volumes_from != null ? var.task_volumes_from[count.index] : null
-        volume           = var.task_volume != null ? var.task_volume[count.index] : null
+        command          = length(var.task_commands) > 0 ? var.task_commands[count.index] : null
+        credentialSpecs  = length(var.task_credential_specs) > 0 ? var.task_credential_specs[count.index] : null
+        entrypoint       = length(var.task_entry_points) > 0 ? var.task_entry_points[count.index] : null
+        environmentFiles = length(var.task_env_files) > 0 ? var.task_env_files[count.index] : null
+        environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
+        healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
+        hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
+        mountPoints = length(var.task_containerPath) == 0 ? null : [{
+          containerPath = var.task_containerPath[count.index]
+          readOnly      = false
+          sourceVolume  = var.task_volume[0]["name"][count.index]
+        }]
+        volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
+        #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
 
         logConfiguration = {
           logDriver = var.container_log_driver
@@ -201,6 +233,38 @@ resource "aws_ecs_task_definition" "ignore_changes" {
   network_mode             = var.network_mode
   requires_compatibilities = [var.task_launch_type]
 
+  dynamic "ephemeral_storage" {
+    for_each = length(var.task_ephemeral_storage) > 0 ? [1] : []
+
+    content {
+      size_in_gib = length(var.task_ephemeral_storage) > 0 ? var.task_ephemeral_storage[count.index] : null
+    }
+  }
+
+  dynamic "volume" {
+    for_each = length(var.task_volume) > 0 ? [1] : []
+
+    content {
+      efs_volume_configuration {
+        file_system_id          = var.task_volume[count.index]["file_system_id"]
+        root_directory          = var.task_volume[count.index]["root_directory"]
+        transit_encryption      = var.task_volume[count.index]["transit_encryption"]
+        transit_encryption_port = var.task_volume[count.index]["transit_encryption_port"]
+        dynamic "authorization_config" {
+          for_each = var.task_volume[count.index]["root_directory"] != null ? [1] : []
+
+          content {
+            access_point_id = var.task_volume[count.index]["authorization_config_access_point_id"]
+            iam             = var.task_volume[count.index]["authorization_config_iam"]
+          }
+        }
+      }
+
+      name      = var.task_volume[count.index]["name"]
+      host_path = try(var.task_volume[count.index]["host_path"], null)
+    }
+  }
+
   container_definitions = jsonencode(
     [
       {
@@ -210,14 +274,16 @@ resource "aws_ecs_task_definition" "ignore_changes" {
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
 
-        command          = var.task_commands
-        entrypoint       = var.task_entry_points
-        environmentFiles = var.task_env_files
-        healthCheck      = var.task_health_check
-        hostname         = var.task_host_name
-        mountPoints      = var.task_mount_point
-        volumesFrom      = var.task_volumes_from
-        volume           = var.task_volume
+        command          = length(var.task_commands) > 0 ? var.task_commands[count.index] : null
+        credentialSpecs  = length(var.task_credential_specs) > 0 ? var.task_credential_specs[count.index] : null
+        entrypoint       = length(var.task_entry_points) > 0 ? var.task_entry_points[count.index] : null
+        environmentFiles = length(var.task_env_files) > 0 ? var.task_env_files[count.index] : null
+        environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
+        healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
+        hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
+        mountPoints      = length(var.task_mount_point) > 0 ? var.task_mount_point[count.index] : null
+        volumesFrom      = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
+        #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
 
         logConfiguration = {
           logDriver = var.container_log_driver
@@ -227,8 +293,6 @@ resource "aws_ecs_task_definition" "ignore_changes" {
             awslogs-stream-prefix = "ecs"
           }
         }
-
-        environment = var.task_env_vars
 
         portMappings = [
           {
@@ -464,6 +528,13 @@ resource "aws_iam_role_policy" "this" {
         {
           Action = [
             "ecr:GetAuthorizationToken"
+          ]
+          Effect   = "Allow"
+          Resource = "*"
+        },
+        {
+          Action = [
+            "elasticfilesystem:*"
           ]
           Effect   = "Allow"
           Resource = "*"

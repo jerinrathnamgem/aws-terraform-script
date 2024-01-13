@@ -46,9 +46,17 @@ module "ecs" {
   task_credential_specs     = var.task_credential_specs
   task_entry_points         = var.task_entry_points
   task_health_check         = var.task_health_check
-  task_mount_point          = var.task_mount_point
-  task_volume               = var.task_volume
   task_volumes_from         = var.task_volumes_from
+  task_ephemeral_storage    = var.task_ephemeral_storage
+  task_containerPath        = var.container_paths
+  task_volume = !var.create_efs ? [] : [{
+    file_system_id = [one(aws_efs_file_system.this[*].id)]
+    name           = var.ecs_service_names
+    #host_path                            = var.container_paths
+    #transit_encryption                   = "ENABLED"
+    # authorization_config_access_point_id = aws_efs_access_point.this[*].id
+    # authorization_config_iam             = "ENABLED"
+  }]
 }
 
 module "security-group-ecs" {

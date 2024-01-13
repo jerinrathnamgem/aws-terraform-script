@@ -233,7 +233,7 @@ variable "tags" {
 variable "task_commands" {
   type        = list(list(string))
   description = "List of The commands that's passed to the container."
-  default     = null
+  default     = []
 }
 
 variable "task_cpu" {
@@ -245,13 +245,13 @@ variable "task_cpu" {
 variable "task_credential_specs" {
   type        = list(list(string))
   description = "A list of ARNs in SSM or Amazon S3 to a credential spec (CredSpec) file that configures the container for Active Directory authentication. We recommend that you use this parameter instead of the dockerSecurityOptions. The maximum number of ARNs is 1."
-  default     = null
+  default     = []
 }
 
 variable "task_entry_points" {
   type        = list(list(string))
   description = "List of The entry points that's passed to the container"
-  default     = null
+  default     = []
 }
 
 variable "task_env_vars" {
@@ -262,7 +262,7 @@ variable "task_env_vars" {
     }
   )))
   description = "List of key-value pair of environment variables for ecs task definition"
-  default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_KeyValuePair.html
+  default     = [] # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_KeyValuePair.html
 }
 
 variable "task_env_files" {
@@ -273,37 +273,58 @@ variable "task_env_files" {
     }
   )))
   description = "A list of files containing the environment variables to pass to a container."
-  default     = null # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_EnvironmentFile.html
+  default     = [] # Reference: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_EnvironmentFile.html
 }
 
 variable "task_health_check" {
   type        = list(map(any))
   description = "The container health check command and associated configuration parameters for the container."
-  default     = null
+  default     = []
 }
 
 variable "task_host_name" {
   type        = list(string)
   description = "The hostname to use for your container."
-  default     = null
+  default     = []
+}
+
+variable "task_ephemeral_storage" {
+  type        = list(number)
+  description = "The total amount, in GiB, of ephemeral storage to set for the task. The minimum supported value is 21 GiB and the maximum supported value is 200 GiB."
+  default     = []
 }
 
 variable "task_mount_point" {
   type        = list(list(map(any)))
   description = "The mount points for data volumes in your container."
-  default     = null
+  default     = []
+}
+
+variable "task_containerPath" {
+  type        = list(string)
+  description = "List of paths for task Containers"
+  default     = []
 }
 
 variable "task_volume" {
-  type        = list(list(any))
+  type = list(object({
+    name                                 = list(string)           # Name of the volume. This name is referenced in the sourceVolume parameter of container definition in the mountPoints section.
+    host_path                            = optional(list(string)) # Path on the host container instance that is presented to the container. If not set, ECS will create a nonpersistent data volume that starts empty and is deleted after the task has finished.
+    file_system_id                       = list(string)           # ID of the EFS File System.
+    root_directory                       = optional(list(string)) #  Directory within the Amazon EFS file system to mount as the root directory inside the host. If this parameter is omitted, the root of the Amazon EFS volume will be used. Specifying / will have the same effect as omitting this parameter. This argument is ignored when using authorization_config.
+    transit_encryption                   = optional(string)       # Whether or not to enable encryption for Amazon EFS data in transit between the Amazon ECS host and the Amazon EFS server. Transit encryption must be enabled if Amazon EFS IAM authorization is used. Valid values: ENABLED, DISABLED
+    transit_encryption_port              = optional(number)       #  Port to use for transit encryption. If you do not specify a transit encryption port, it will use the port selection strategy that the Amazon EFS mount helper uses.
+    authorization_config_access_point_id = optional(list(string)) # List of Access point ID to use. If an access point is specified, the root directory value will be relative to the directory set for the access point. If specified, transit encryption must be enabled in the EFSVolumeConfiguration.
+    authorization_config_iam             = optional(string)       # Whether or not to use the Amazon ECS task IAM role defined in a task definition when mounting the Amazon EFS file system. If enabled, transit encryption must be enabled in the EFSVolumeConfiguration. Valid values: ENABLED, DISABLED
+  }))
   description = "Data volumes to mount from efs or docker or windows"
-  default     = null
+  default     = []
 }
 
 variable "task_volumes_from" {
   type        = list(list(map(any)))
   description = "Data volumes to mount from another container"
-  default     = null
+  default     = []
 }
 
 variable "task_memory" {
