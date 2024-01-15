@@ -89,7 +89,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
 ######################### EFS ################################
 
 resource "aws_efs_file_system" "this" {
-  count            = var.create_efs ? 1 : 0
+  count            = var.create_efs ? length(var.ecs_service_names) : 0
   encrypted        = var.efs_encrypted
   kms_key_id       = var.efs_kms_id
   throughput_mode  = var.efs_throughput_mode
@@ -102,9 +102,33 @@ resource "aws_efs_file_system" "this" {
 }
 
 resource "aws_efs_mount_target" "this" {
-  count = !var.create_efs ? 0 : (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids))
+  count = var.create_efs && length(var.ecs_service_names) > 0 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0 
 
-  file_system_id  = aws_efs_file_system.this[0].id
+  file_system_id  = one([aws_efs_file_system.this[0].id])
+  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+  security_groups = [aws_security_group.this[0].id]
+}
+
+resource "aws_efs_mount_target" "this_1" {
+  count = var.create_efs && length(var.ecs_service_names) > 1 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+
+  file_system_id  = one([aws_efs_file_system.this[1].id])
+  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+  security_groups = [aws_security_group.this[0].id]
+}
+
+resource "aws_efs_mount_target" "this_2" {
+  count = var.create_efs && length(var.ecs_service_names) >2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+
+  file_system_id  = one([aws_efs_file_system.this[2].id])
+  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+  security_groups = [aws_security_group.this[0].id]
+}
+
+resource "aws_efs_mount_target" "this_3" {
+  count = var.create_efs && length(var.ecs_service_names) > 3 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+
+  file_system_id  = one([aws_efs_file_system.this[3].id])
   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
   security_groups = [aws_security_group.this[0].id]
 }

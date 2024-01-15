@@ -50,9 +50,9 @@ module "ecs" {
   task_ephemeral_storage    = var.task_ephemeral_storage
   task_containerPath        = var.container_paths
   task_volume = !var.create_efs ? [] : [{
-    file_system_id = [one(aws_efs_file_system.this[*].id)]
+    file_system_id = aws_efs_file_system.this[*].id #[one(aws_efs_file_system.this[*].id)]
     name           = var.ecs_service_names
-    #host_path                            = var.container_paths
+    #host_path                            = [] #localpath
     #transit_encryption                   = "ENABLED"
     # authorization_config_access_point_id = aws_efs_access_point.this[*].id
     # authorization_config_iam             = "ENABLED"

@@ -322,7 +322,9 @@ resource "aws_ecs_task_definition" "ignore_changes" {
       cpu,
       memory,
       network_mode,
-      requires_compatibilities
+      requires_compatibilities,
+      ephemeral_storage,
+      volume
     ]
   }
 
