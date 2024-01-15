@@ -180,7 +180,7 @@ resource "aws_ecs_task_definition" "this" {
         environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
         healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
         hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
-        mountPoints = length(var.task_containerPath) == 0 ? null : [{
+        mountPoints      = length(var.task_containerPath) == 0 ? null : [{
           containerPath = var.task_containerPath[count.index]
           readOnly      = false
           sourceVolume  = var.task_volume[0]["name"][count.index]
@@ -246,22 +246,18 @@ resource "aws_ecs_task_definition" "ignore_changes" {
 
     content {
       efs_volume_configuration {
-        file_system_id          = var.task_volume[count.index]["file_system_id"]
-        root_directory          = var.task_volume[count.index]["root_directory"]
-        transit_encryption      = var.task_volume[count.index]["transit_encryption"]
-        transit_encryption_port = var.task_volume[count.index]["transit_encryption_port"]
-        dynamic "authorization_config" {
-          for_each = var.task_volume[count.index]["root_directory"] != null ? [1] : []
-
-          content {
-            access_point_id = var.task_volume[count.index]["authorization_config_access_point_id"]
-            iam             = var.task_volume[count.index]["authorization_config_iam"]
-          }
-        }
+        file_system_id          = var.task_volume[0]["file_system_id"][count.index]
+        transit_encryption      = var.task_volume[0]["transit_encryption"]
+        transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
+        #root_directory = var.task_volume[0]["root_directory"][count.index]
+        # authorization_config {
+        #   access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
+        #   iam             = var.task_volume[0]["authorization_config_iam"]
+        # }
       }
 
-      name      = var.task_volume[count.index]["name"]
-      host_path = try(var.task_volume[count.index]["host_path"], null)
+      name      = var.task_volume[0]["name"][count.index]
+      host_path = try(var.task_volume[0]["host_path"][count.index], null)
     }
   }
 
@@ -281,8 +277,12 @@ resource "aws_ecs_task_definition" "ignore_changes" {
         environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
         healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
         hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
-        mountPoints      = length(var.task_mount_point) > 0 ? var.task_mount_point[count.index] : null
-        volumesFrom      = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
+        mountPoints      = length(var.task_containerPath) == 0 ? null : [{
+          containerPath = var.task_containerPath[count.index]
+          readOnly      = false
+          sourceVolume  = var.task_volume[0]["name"][count.index]
+        }]
+        volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
         #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
 
         logConfiguration = {

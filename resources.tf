@@ -102,7 +102,7 @@ resource "aws_efs_file_system" "this" {
 }
 
 resource "aws_efs_mount_target" "this" {
-  count = var.create_efs && length(var.ecs_service_names) > 0 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0 
+  count = var.create_efs && length(var.ecs_service_names) > 0 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
   file_system_id  = one([aws_efs_file_system.this[0].id])
   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
@@ -118,7 +118,7 @@ resource "aws_efs_mount_target" "this_1" {
 }
 
 resource "aws_efs_mount_target" "this_2" {
-  count = var.create_efs && length(var.ecs_service_names) >2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+  count = var.create_efs && length(var.ecs_service_names) > 2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
   file_system_id  = one([aws_efs_file_system.this[2].id])
   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
