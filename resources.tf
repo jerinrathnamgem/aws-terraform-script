@@ -1,7 +1,7 @@
 ##################### GitHub Connection ###############################
 
 resource "aws_codestarconnections_connection" "this" {
-  count = var.connection_arn == null && var.github_oauth_token == null ? 1 : 0
+  count = var.create_pipeline && var.connection_arn == null && var.github_oauth_token == null ? 1 : 0
 
   name          = "${var.create_ecs_deployment ? var.ecs_service_names[count.index] : var.eks_pipeline_names[count.index]}-pipeline"
   provider_type = "GitHub"
@@ -184,7 +184,7 @@ resource "aws_route53_record" "this" {
 ######################### PIPELINE ALERTS ################################
 
 resource "aws_codestarnotifications_notification_rule" "this" {
-  count = var.create_ecs_deployment ? length(var.ecs_service_names) : var.create_eks_deployment ? length(var.eks_pipeline_names) : 1
+  count = !var.create_pipeline ? 0 : (var.create_ecs_deployment ? length(var.ecs_service_names) : var.create_eks_deployment ? length(var.eks_pipeline_names) : 1)
 
   detail_type = "FULL"
   name        = "${var.create_ecs_deployment ? var.ecs_service_names[count.index] : var.create_eks_deployment ? var.eks_pipeline_names[count.index] : var.ec2_name}-pipeline-notification"
@@ -201,20 +201,20 @@ resource "aws_codestarnotifications_notification_rule" "this" {
 }
 
 resource "aws_sns_topic" "this" {
-  count = var.sns_topic_arn == null ? 1 : 0
+  count = var.create_pipeline && var.sns_topic_arn == null ? 1 : 0
 
   name = "${var.create_ecs_deployment ? var.ecs_service_names[0] : var.create_eks_deployment ? var.eks_pipeline_names[0] : var.ec2_name}-pipeline-notification"
 }
 
 resource "aws_sns_topic_policy" "this" {
-  count = var.sns_topic_arn == null ? 1 : 0
+  count = var.create_pipeline && var.sns_topic_arn == null ? 1 : 0
 
   arn    = aws_sns_topic.this[0].arn
   policy = data.aws_iam_policy_document.this[0].json
 }
 
 data "aws_iam_policy_document" "this" {
-  count = var.sns_topic_arn == null ? 1 : 0
+  count = var.create_pipeline && var.sns_topic_arn == null ? 1 : 0
 
   policy_id = "__default_policy_ID"
 
@@ -267,7 +267,7 @@ data "aws_iam_policy_document" "this" {
 }
 
 resource "aws_sns_topic_subscription" "this" {
-  count = var.sns_topic_arn == null ? length(var.email_addresses) : 0
+  count = var.create_pipeline && var.sns_topic_arn == null ? length(var.email_addresses) : 0
 
   topic_arn = one(aws_sns_topic.this[*].arn)
   protocol  = "email"

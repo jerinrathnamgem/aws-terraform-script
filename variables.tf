@@ -54,6 +54,12 @@ variable "alb_subnet_ids" {
 
 ################################## CODE PIPELINE #############################################
 
+variable "create_pipeline" {
+  type        = bool
+  description = "Whether to create pipeline or not"
+  default     = true
+}
+
 variable "codebuild_compute_type" {
   type        = string
   description = "Type or aize of the server for code build project. Valid values: BUILD_GENERAL1_SMALL, BUILD_GENERAL1_MEDIUM, BUILD_GENERAL1_LARGE, BUILD_GENERAL1_2XLARGE"

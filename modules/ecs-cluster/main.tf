@@ -167,8 +167,9 @@ resource "aws_ecs_task_definition" "this" {
   container_definitions = jsonencode(
     [
       {
-        name      = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
-        image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        name  = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
+        image = var.container_images != [] ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        # image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         cpu       = length(var.container_cpu) == 0 ? null : length(var.container_cpu) > 1 ? var.container_cpu[count.index] : var.container_cpu[0]
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
@@ -180,7 +181,7 @@ resource "aws_ecs_task_definition" "this" {
         environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
         healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
         hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
-        mountPoints      = length(var.task_containerPath) == 0 ? null : [{
+        mountPoints = length(var.task_containerPath) == 0 ? null : [{
           containerPath = var.task_containerPath[count.index]
           readOnly      = false
           sourceVolume  = var.task_volume[0]["name"][count.index]
@@ -264,8 +265,9 @@ resource "aws_ecs_task_definition" "ignore_changes" {
   container_definitions = jsonencode(
     [
       {
-        name      = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
-        image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        name  = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
+        image = var.container_images != [] ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        # image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         cpu       = length(var.container_cpu) == 0 ? null : length(var.container_cpu) > 1 ? var.container_cpu[count.index] : var.container_cpu[0]
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
@@ -277,7 +279,7 @@ resource "aws_ecs_task_definition" "ignore_changes" {
         environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
         healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
         hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
-        mountPoints      = length(var.task_containerPath) == 0 ? null : [{
+        mountPoints = length(var.task_containerPath) == 0 ? null : [{
           containerPath = var.task_containerPath[count.index]
           readOnly      = false
           sourceVolume  = var.task_volume[0]["name"][count.index]
@@ -485,7 +487,7 @@ resource "aws_iam_role" "this" {
 
   count = var.ecs_task_role_name == null ? 1 : 0
 
-  name = "${var.name[0]}-ecs-role"
+  name = "${var.name[0]}-ecs"
 
   assume_role_policy = jsonencode(
     {
@@ -511,7 +513,37 @@ resource "aws_iam_role_policy" "this" {
 
   count = var.ecs_task_role_name == null ? 1 : 0
 
-  name = "${var.name[0]}-ecs-policy"
+  name = "${var.name[0]}-ecs-cwlog"
+  role = aws_iam_role.this[0].id
+
+  policy = jsonencode(
+    {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = [
+            "elasticfilesystem:*"
+          ]
+          Effect   = "Allow"
+          Resource = "*"
+        },
+        {
+          Action = [
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Effect   = "Allow"
+          Resource = var.create_cloudwatch_log_group ? concat(aws_cloudwatch_log_group.this[*].arn, formatlist("%s:*", aws_cloudwatch_log_group.this[*].arn)) : ["*"]
+        }
+      ]
+    }
+  )
+}
+resource "aws_iam_role_policy" "ecr" {
+
+  count = var.ecs_task_role_name == null && var.create_ecr_repository ? 1 : 0
+
+  name = "${var.name[0]}-ecs-ecr"
   role = aws_iam_role.this[0].id
 
   policy = jsonencode(
@@ -533,21 +565,6 @@ resource "aws_iam_role_policy" "this" {
           ]
           Effect   = "Allow"
           Resource = "*"
-        },
-        {
-          Action = [
-            "elasticfilesystem:*"
-          ]
-          Effect   = "Allow"
-          Resource = "*"
-        },
-        {
-          Action = [
-            "logs:CreateLogStream",
-            "logs:PutLogEvents"
-          ]
-          Effect   = "Allow"
-          Resource = var.create_cloudwatch_log_group ? concat(aws_cloudwatch_log_group.this[*].arn, formatlist("%s:*", aws_cloudwatch_log_group.this[*].arn)) : ["*"]
         }
       ]
     }

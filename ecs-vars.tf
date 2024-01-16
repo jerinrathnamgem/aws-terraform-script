@@ -152,6 +152,18 @@ variable "container_paths" {
   default     = []
 }
 
+variable "container_images" {
+  type        = list(string)
+  description = "List of images for task definition"
+  default     = []
+}
+
+variable "image_tags" {
+  type        = list(string)
+  description = "List of ECR image tags. If tags are 'latest' for all the images just leave it default. If a single value is same for all services, then provide one value is enough"
+  default     = ["latest"]
+}
+
 # EFS Storage
 
 variable "create_efs" {

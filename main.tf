@@ -49,7 +49,10 @@ module "ecs" {
   task_volumes_from         = var.task_volumes_from
   task_ephemeral_storage    = var.task_ephemeral_storage
   task_containerPath        = var.container_paths
-  task_volume = !var.create_efs ? [] : [{
+  create_ecr_repository     = var.create_pipeline
+  container_images          = var.container_images
+  image_tags                = var.image_tags
+  task_volume               = !var.create_efs ? [] : [{
     file_system_id = aws_efs_file_system.this[*].id #[one(aws_efs_file_system.this[*].id)]
     name           = var.ecs_service_names
     #host_path                            = [] #localpath
@@ -172,7 +175,7 @@ resource "kubernetes_config_map_v1_data" "aws-auth" {
 
 module "ecs-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_ecs_deployment ? length(var.ecs_service_names) : 0
+  count  = var.create_pipeline && var.create_ecs_deployment ? length(var.ecs_service_names) : 0
 
   ecs_deployment       = var.create_ecs_deployment
   ec2_deployment       = var.create_ec2_deployment
@@ -209,7 +212,7 @@ module "ecs-pipeline" {
 
 module "ec2-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_ec2_deployment ? 1 : 0
+  count  = var.create_pipeline && var.create_ec2_deployment ? 1 : 0
 
   ecs_deployment     = var.create_ecs_deployment
   ec2_deployment     = var.create_ec2_deployment
@@ -236,7 +239,7 @@ module "ec2-pipeline" {
 
 module "eks-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
+  count  = var.create_pipeline && var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
 
   ecs_deployment       = var.create_ecs_deployment
   ec2_deployment       = var.create_ec2_deployment
@@ -278,7 +281,7 @@ module "eks-pipeline" {
 }
 
 resource "aws_ecr_repository" "this" {
-  count = var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
+  count = var.create_pipeline && var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
 
   name                 = lower(var.eks_pipeline_names[count.index])
   force_delete         = true
