@@ -89,7 +89,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
 ######################### EFS ################################
 
 resource "aws_efs_file_system" "this" {
-  count            = var.create_efs ? length(var.ecs_service_names) : 0
+  count            = var.create_efs ? 1 : 0
   encrypted        = var.efs_encrypted
   kms_key_id       = var.efs_kms_id
   throughput_mode  = var.efs_throughput_mode
@@ -109,38 +109,82 @@ resource "aws_efs_mount_target" "this" {
   security_groups = [aws_security_group.this[0].id]
 }
 
-resource "aws_efs_mount_target" "this_1" {
-  count = var.create_efs && length(var.ecs_service_names) > 1 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+# resource "aws_efs_mount_target" "this_1" {
+#   count = var.create_efs && length(var.ecs_service_names) > 1 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
-  file_system_id  = one([aws_efs_file_system.this[1].id])
-  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
-  security_groups = [aws_security_group.this[0].id]
-}
+#   file_system_id  = one([aws_efs_file_system.this[1].id])
+#   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+#   security_groups = [aws_security_group.this[0].id]
+# }
 
-resource "aws_efs_mount_target" "this_2" {
-  count = var.create_efs && length(var.ecs_service_names) > 2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+# resource "aws_efs_mount_target" "this_2" {
+#   count = var.create_efs && length(var.ecs_service_names) > 2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
-  file_system_id  = one([aws_efs_file_system.this[2].id])
-  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
-  security_groups = [aws_security_group.this[0].id]
-}
+#   file_system_id  = one([aws_efs_file_system.this[2].id])
+#   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+#   security_groups = [aws_security_group.this[0].id]
+# }
 
-resource "aws_efs_mount_target" "this_3" {
-  count = var.create_efs && length(var.ecs_service_names) > 3 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+# resource "aws_efs_mount_target" "this_3" {
+#   count = var.create_efs && length(var.ecs_service_names) > 3 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
-  file_system_id  = one([aws_efs_file_system.this[3].id])
-  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
-  security_groups = [aws_security_group.this[0].id]
-}
+#   file_system_id  = one([aws_efs_file_system.this[3].id])
+#   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+#   security_groups = [aws_security_group.this[0].id]
+# }
 
-# resource "aws_efs_access_point" "this" {
-#   count = var.create_efs ? length(var.ecs_service_names) : 0
+# data "aws_iam_policy_document" "efs" {
+#   count = var.create_efs ? 1 : 0
+#   statement {
+#     sid    = "DenyAllPublicAccess"
+#     effect = "Deny"
 
-#   file_system_id = aws_efs_file_system.this[0].id
-#   root_directory {
-#     path = "/efs/${var.ecs_service_names[count.index]}"
+#     principals {
+#       type        = "AWS"
+#       identifiers = ["*"]
+#     }
+
+#     actions = ["*"
+#       # "elasticfilesystem:ClientMount",
+#       # "elasticfilesystem:ClientWrite",
+#     ]
+
+#     #resources = aws_efs_file_system.this[*].arn
+
+#     condition {
+#       test     = "Bool"
+#       variable = "aws:SecureTransport"
+#       values   = ["false"]
+#     }
 #   }
 # }
+
+# resource "aws_efs_file_system_policy" "this" {
+#   count = var.create_efs ? 1 : 0
+
+#   file_system_id = aws_efs_file_system.this[count.index].id
+#   policy         = data.aws_iam_policy_document.efs[0].json
+# }
+
+resource "aws_efs_access_point" "this" {
+  count = var.create_efs ? length(var.ecs_service_names) : 0
+
+  file_system_id = aws_efs_file_system.this[0].id
+  root_directory {
+    path = var.container_paths[count.index]
+
+    creation_info {
+      owner_gid   = var.user_id # 1000 + count.index
+      owner_uid   = var.group_id
+      permissions = 755
+    }
+  }
+
+  posix_user {
+    gid = var.user_id
+    uid = var.group_id
+  }
+}
 
 resource "aws_security_group" "this" {
   count = var.create_efs ? 1 : 0

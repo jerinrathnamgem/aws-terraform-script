@@ -149,14 +149,14 @@ resource "aws_ecs_task_definition" "this" {
 
     content {
       efs_volume_configuration {
-        file_system_id          = var.task_volume[0]["file_system_id"][count.index]
+        file_system_id          = var.task_volume[0]["file_system_id"][0] #[count.index]
         transit_encryption      = var.task_volume[0]["transit_encryption"]
         transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
-        #root_directory = var.task_volume[0]["root_directory"][count.index]
-        # authorization_config {
-        #   access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
-        #   iam             = var.task_volume[0]["authorization_config_iam"]
-        # }
+        #root_directory          = var.task_volume[0]["root_directory"][count.index]
+        authorization_config {
+          access_point_id = var.task_volume[0]["authorization_config_access_point_id"] == null ? null : var.task_volume[0]["authorization_config_access_point_id"][count.index]
+          iam             = var.task_volume[0]["authorization_config_iam"]
+        }
       }
 
       name      = var.task_volume[0]["name"][count.index]
@@ -251,10 +251,10 @@ resource "aws_ecs_task_definition" "ignore_changes" {
         transit_encryption      = var.task_volume[0]["transit_encryption"]
         transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
         #root_directory = var.task_volume[0]["root_directory"][count.index]
-        # authorization_config {
-        #   access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
-        #   iam             = var.task_volume[0]["authorization_config_iam"]
-        # }
+        authorization_config {
+          access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
+          iam             = var.task_volume[0]["authorization_config_iam"]
+        }
       }
 
       name      = var.task_volume[0]["name"][count.index]
@@ -266,7 +266,7 @@ resource "aws_ecs_task_definition" "ignore_changes" {
     [
       {
         name  = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
-        image = length(var.container_images) > 0  ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        image = length(var.container_images) > 0 ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         # image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         cpu       = length(var.container_cpu) == 0 ? null : length(var.container_cpu) > 1 ? var.container_cpu[count.index] : var.container_cpu[0]
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]

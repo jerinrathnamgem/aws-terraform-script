@@ -172,6 +172,17 @@ variable "create_efs" {
   default     = false
 }
 
+variable "user_id" {
+  type        = number
+  description = "User ID in the docker container"
+  default     = 0
+}
+
+variable "group_id" {
+  type        = number
+  description = "Group ID in the docker container"
+  default     = 0
+}
 
 variable "efs_encrypted" {
   type        = bool
