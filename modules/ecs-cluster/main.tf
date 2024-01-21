@@ -247,12 +247,12 @@ resource "aws_ecs_task_definition" "ignore_changes" {
 
     content {
       efs_volume_configuration {
-        file_system_id          = var.task_volume[0]["file_system_id"][count.index]
+        file_system_id          = var.task_volume[0]["file_system_id"][0] #[count.index]
         transit_encryption      = var.task_volume[0]["transit_encryption"]
         transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
-        #root_directory = var.task_volume[0]["root_directory"][count.index]
+        #root_directory          = var.task_volume[0]["root_directory"][count.index]
         authorization_config {
-          access_point_id = var.task_volume[0]["authorization_config_access_point_id"][count.index]
+          access_point_id = var.task_volume[0]["authorization_config_access_point_id"] == null ? null : var.task_volume[0]["authorization_config_access_point_id"][count.index]
           iam             = var.task_volume[0]["authorization_config_iam"]
         }
       }
