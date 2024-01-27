@@ -172,6 +172,12 @@ variable "create_efs" {
   default     = false
 }
 
+variable "efs_file_system_id" {
+  type        = string
+  description = "ID of the EFS file system. Needed only 'create_efs' is set to 'false'"
+  default     = false
+}
+
 variable "user_id" {
   type        = number
   description = "User ID in the docker container"

@@ -109,13 +109,13 @@ resource "aws_efs_mount_target" "this" {
   security_groups = [aws_security_group.this[0].id]
 }
 
-# resource "aws_efs_mount_target" "this_1" {
-#   count = var.create_efs && length(var.ecs_service_names) > 1 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
+resource "aws_efs_mount_target" "this_1" {
+  count = !var.create_efs && var.efs_file_system_id != null && length(var.ecs_service_names) > 1 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0
 
-#   file_system_id  = one([aws_efs_file_system.this[1].id])
-#   subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
-#   security_groups = [aws_security_group.this[0].id]
-# }
+  file_system_id  = var.efs_file_system_id
+  subnet_id       = length(var.efs_subnet_ids) == 0 ? data.aws_subnets.this.ids[count.index] : var.efs_subnet_ids[count.index]
+  security_groups = [aws_security_group.this[0].id]
+}
 
 # resource "aws_efs_mount_target" "this_2" {
 #   count = var.create_efs && length(var.ecs_service_names) > 2 ? (length(var.efs_subnet_ids) == 0 ? length(data.aws_subnets.this.ids) : length(var.efs_subnet_ids)) : 0

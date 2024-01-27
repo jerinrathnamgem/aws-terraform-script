@@ -53,10 +53,10 @@ module "ecs" {
   container_images          = var.container_images
   image_tags                = var.image_tags
   task_volume = !var.create_efs ? [] : [{
-    file_system_id                       = [one(aws_efs_file_system.this[*].id)]
+    file_system_id                       = [var.create_efs ? one(aws_efs_file_system.this[*].id): var.efs_file_system_id]
     name                                 = var.ecs_service_names
     transit_encryption                   = "ENABLED"
-    authorization_config_access_point_id = aws_efs_access_point.this[*].id
+    authorization_config_access_point_id = var.create_efs && var.efs_file_system_id == null ? aws_efs_access_point.this[*].id : aws_efs_access_point.this_1[*].id
     authorization_config_iam             = "ENABLED"
     #host_path                            = [] #localpath
   }]
