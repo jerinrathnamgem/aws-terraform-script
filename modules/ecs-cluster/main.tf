@@ -184,7 +184,7 @@ resource "aws_ecs_task_definition" "this" {
         mountPoints = length(var.task_containerPath) == 0 ? null : [{
           containerPath = var.task_containerPath[count.index]
           readOnly      = false
-          sourceVolume  = var.task_volume[0]["name"][count.index]
+          sourceVolume  = length(var.task_volume) > 0 ? var.task_volume[0]["name"][count.index] : null
         }]
         volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
         #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
@@ -282,7 +282,7 @@ resource "aws_ecs_task_definition" "ignore_changes" {
         mountPoints = length(var.task_containerPath) == 0 ? null : [{
           containerPath = var.task_containerPath[count.index]
           readOnly      = false
-          sourceVolume  = var.task_volume[0]["name"][count.index]
+          sourceVolume  = length(var.task_volume) > 0 ? var.task_volume[0]["name"][count.index] : null
         }]
         volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
         #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
