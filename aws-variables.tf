@@ -1,5 +1,11 @@
 ######################################### MAIN ##############################################
 
+variable "aws_deployment" {
+  type        = bool
+  description = "Whether to deploy resources in AWS cloud"
+  default     = true # this will create resources in AWS
+}
+
 variable "access_key" {
   type        = string
   sensitive   = true

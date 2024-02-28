@@ -175,7 +175,7 @@ variable "create_efs" {
 variable "efs_file_system_id" {
   type        = string
   description = "ID of the EFS file system. Needed only 'create_efs' is set to 'false'"
-  default     = false
+  default     = null
 }
 
 variable "user_id" {
