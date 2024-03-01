@@ -235,7 +235,7 @@ resource "kubernetes_secret_v1" "gcp" {
 }
 
 locals {
-  image = "${var.gcp_region}-docker.pkg.dev/${var.project_id}/${var.gcp_name}-repo/${var.gcp_repo_name}"
+  image = "${var.gcp_region}-docker.pkg.dev/${var.project_id}/${var.gcp_name}-repo"
 }
 
 # Artifact Registry Repository
@@ -251,6 +251,7 @@ resource "google_artifact_registry_repository" "this" {
   ]
 }
 
+# Secret Manager
 resource "google_secret_manager_secret" "github-token-secret" {
   count = var.gcp_deployment ? 1 : 0
 
@@ -277,6 +278,7 @@ resource "google_secret_manager_secret_version" "github-token-secret-version" {
   ]
 }
 
+# Access permission for Secret
 data "google_iam_policy" "p4sa-secretAccessor" {
   count = var.gcp_deployment ? 1 : 0
 
@@ -301,6 +303,7 @@ resource "google_secret_manager_secret_iam_policy" "policy" {
   ]
 }
 
+# GitHub Connection
 resource "google_cloudbuildv2_connection" "this" {
   count = var.gcp_deployment ? 1 : 0
 
@@ -321,13 +324,13 @@ resource "google_cloudbuildv2_connection" "this" {
 }
 
 resource "google_cloudbuildv2_repository" "this" {
-  count = var.gcp_deployment ? 1 : 0
+  count = var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
 
   project           = var.project_id
   location          = var.gcp_region
-  name              = var.gcp_repo_name
+  name              = var.gcp_pipeline_names[count.index]
   parent_connection = google_cloudbuildv2_connection.this[0].name
-  remote_uri        = var.gcp_github_uri
+  remote_uri        = "https://github.com/${var.gcp_github_username}/${var.gcp_repo_names[count.index]}.git"
 
   depends_on = [
     google_cloudbuildv2_connection.this
@@ -336,15 +339,16 @@ resource "google_cloudbuildv2_repository" "this" {
 
 # Cloud Build Trigger
 resource "google_cloudbuild_trigger" "this" {
-  count = var.gcp_deployment ? 1 : 0
+  count = var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
 
+  name               = var.gcp_pipeline_names[count.index]
   location           = var.gcp_region
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
 
   repository_event_config {
-    repository = google_cloudbuildv2_repository.this[0].id
+    repository = google_cloudbuildv2_repository.this[count.index].id
     push {
-      branch = "^${var.gcp_branch}$"
+      branch = "^${length(var.gcp_branch) > 1 ? var.gcp_branch[count.index] : var.gcp_branch[0]}$"
     }
   }
 
@@ -352,17 +356,17 @@ resource "google_cloudbuild_trigger" "this" {
 
     step {
       name = "gcr.io/cloud-builders/docker"
-      args = ["build", "-t", local.image, "."]
+      args = ["build", "-t", "${local.image}/${var.gcp_pipeline_names[count.index]}", "."]
     }
 
     step {
       name = "gcr.io/cloud-builders/docker"
-      args = ["push", "${local.image}:latest"]
+      args = ["push", "${local.image}/${var.gcp_pipeline_names[count.index]}:latest"]
     }
 
     step {
       name = "gcr.io/cloud-builders/gke-deploy"
-      args = ["run", "--filename", var.gcp_manifest_file, "--cluster", var.gcp_name, "--location", var.gcp_region]
+      args = ["run", "--filename", var.gcp_manifest_files[count.index], "--cluster", var.gcp_name, "--location", var.gcp_region]
     }
 
     # step {
@@ -393,8 +397,8 @@ resource "google_project_iam_member" "cloudbuild_roles" {
 
 # IP Address for Ingress
 resource "google_compute_global_address" "ingress" {
-  count = var.gcp_deployment ? 1 : 0
+  count = 0 # var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
 
-  name         = "${var.gcp_name}-web-ip"
+  name         = "${var.gcp_name}-${count.index}-web-ip"
   address_type = "EXTERNAL"
 }

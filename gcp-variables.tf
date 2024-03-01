@@ -1,7 +1,7 @@
 variable "gcp_deployment" {
   type        = bool
   description = "Whether to deploy resources in GCP cloud"
-  default     = false # this will create resources in GCP
+  default     = true # this will create resources in GCP
 }
 
 variable "project_id" {
@@ -148,16 +148,28 @@ variable "enable_prometheus" {
   default     = true
 }
 
-variable "gcp_repo_name" {
+variable "gcp_pipeline_names" {
+  type        = list(string)
+  description = "List of Names of the pipelines. Adding New name will create new Pipelines."
+  default     = []
+}
+
+variable "gcp_repo_names" {
+  type        = list(string)
+  description = "List of Name of the source repositories. For multiple pipelines should need multiple repo names"
+  default     = []
+}
+
+variable "gcp_github_username" {
   type        = string
-  description = "Name of the source repository name"
+  description = "github account username."
   default     = null
 }
 
 variable "gcp_branch" {
-  type        = string
-  description = "Branch name of the repository"
-  default     = "main"
+  type        = list(string)
+  description = "List Branch name of the repositories. If all pipelines needs same branch name. Enter on branch name is enough"
+  default     = ["main"]
 }
 
 variable "gcp_github_token" {
@@ -166,16 +178,10 @@ variable "gcp_github_token" {
   default     = null
 }
 
-variable "gcp_github_uri" {
-  type        = string
-  description = "URI is the host URI of your repository. For example, https://github.com/myuser/myrepo.git."
-  default     = null
-}
-
-variable "gcp_manifest_file" {
-  type        = string
-  description = "File path of your Kubernetes manifest file in GitHub Repository"
-  default     = "manifests/kube-dash.yml"
+variable "gcp_manifest_files" {
+  type        = list(string)
+  description = "list of File path of your Kubernetes manifest file in each GitHub Repositories. For multiple pipelines should need multiple values."
+  default     = ["manifests/deployment.yml"]
 }
 
 variable "app_installation_id" {
