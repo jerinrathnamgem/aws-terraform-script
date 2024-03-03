@@ -190,6 +190,12 @@ variable "app_installation_id" {
   default     = null
 }
 
+variable "enable_gcp_notification" {
+  type        = bool
+  description = "Whether to enable Pipeline notification in GCP"
+  default     = true
+}
+
 variable "gcp_email_display_names" {
   type        = list(string)
   description = "List of names for email IDs for Alert Notifications"

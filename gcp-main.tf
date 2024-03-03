@@ -405,7 +405,7 @@ resource "google_compute_global_address" "ingress" {
 
 # Pipeline Notification
 resource "google_monitoring_notification_channel" "this" {
-  count = var.gcp_deployment ? length(var.gcp_email_addresses) : 0
+  count = var.gcp_deployment && var.enable_gcp_notification ? length(var.gcp_email_addresses) : 0
 
   display_name = var.gcp_email_display_names[count.index]
   type         = "email"
@@ -422,7 +422,7 @@ locals {
 }
 
 resource "google_logging_metric" "error" {
-  for_each = var.gcp_deployment ? local.trigger : {}
+  for_each = var.gcp_deployment && var.enable_gcp_notification ? local.trigger : {}
 
   project = var.project_id
   name    = "${each.key}-error-metric"
@@ -440,7 +440,7 @@ resource "google_logging_metric" "error" {
 }
 
 resource "google_logging_metric" "success" {
-  for_each = var.gcp_deployment ? local.trigger : {}
+  for_each = var.gcp_deployment && var.enable_gcp_notification ? local.trigger : {}
 
   project = var.project_id
   name    = "${each.key}-success-metric"
@@ -458,7 +458,7 @@ resource "google_logging_metric" "success" {
 }
 
 resource "google_monitoring_alert_policy" "error" {
-  for_each = var.gcp_deployment ? local.trigger : {}
+  for_each = var.gcp_deployment && var.enable_gcp_notification ? local.trigger : {}
 
   display_name = "${each.key}-error-alert"
   combiner     = "OR"
@@ -508,7 +508,7 @@ resource "google_monitoring_alert_policy" "error" {
 }
 
 resource "google_monitoring_alert_policy" "success" {
-  for_each = var.gcp_deployment ? local.trigger : {}
+  for_each = var.gcp_deployment && var.enable_gcp_notification ? local.trigger : {}
 
   display_name = "${each.key}-success-alert"
   combiner     = "OR"
