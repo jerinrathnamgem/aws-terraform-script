@@ -402,3 +402,157 @@ resource "google_compute_global_address" "ingress" {
   name         = "${var.gcp_name}-${count.index}-web-ip"
   address_type = "EXTERNAL"
 }
+
+# Pipeline Notification
+resource "google_monitoring_notification_channel" "this" {
+  count = var.gcp_deployment ? length(var.gcp_email_addresses) : 0
+
+  display_name = var.gcp_email_display_names[count.index]
+  type         = "email"
+  enabled      = true
+  force_delete = true
+
+  labels = {
+    email_address = var.gcp_email_addresses[count.index]
+  }
+}
+
+locals {
+  trigger = zipmap(var.gcp_pipeline_names, google_cloudbuild_trigger.this[*].trigger_id)
+}
+
+resource "google_logging_metric" "error" {
+  for_each = var.gcp_deployment ? local.trigger : {}
+
+  project = var.project_id
+  name    = "${each.key}-error-metric"
+  filter  = "resource.type=\"build\"\r\nresource.labels.build_trigger_id=\"${each.value}\"\r\ntextPayload=~\"^ERROR:\""
+  metric_descriptor {
+    display_name = null
+    metric_kind  = "DELTA"
+    unit         = "1"
+    value_type   = "INT64"
+  }
+  disabled         = false
+  value_extractor  = null
+  label_extractors = {}
+  bucket_name      = null
+}
+
+resource "google_logging_metric" "success" {
+  for_each = var.gcp_deployment ? local.trigger : {}
+
+  project = var.project_id
+  name    = "${each.key}-success-metric"
+  filter  = "resource.type=\"build\"\r\nresource.labels.build_trigger_id=\"${each.value}\"\r\ntextPayload=~\"^DONE\""
+  metric_descriptor {
+    display_name = null
+    metric_kind  = "DELTA"
+    unit         = "1"
+    value_type   = "INT64"
+  }
+  disabled         = false
+  value_extractor  = null
+  label_extractors = {}
+  bucket_name      = null
+}
+
+resource "google_monitoring_alert_policy" "error" {
+  for_each = var.gcp_deployment ? local.trigger : {}
+
+  display_name = "${each.key}-error-alert"
+  combiner     = "OR"
+  conditions {
+    display_name = "error-alert"
+    condition_threshold {
+      threshold_value = 0.5
+      filter          = "resource.type = \"build\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.error[each.key].id}\""
+      duration        = "0s"
+      comparison      = "COMPARISON_GT"
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_COUNT"
+      }
+      trigger {
+        count   = 1
+        percent = 0
+      }
+    }
+  }
+  severity              = "ERROR"
+  notification_channels = google_monitoring_notification_channel.this[*].id
+  alert_strategy {
+    auto_close = "1800s"
+    notification_channel_strategy {
+      notification_channel_names = google_monitoring_notification_channel.this[*].id
+      renotify_interval          = "3600s"
+    }
+  }
+
+  documentation {
+    content   = <<-EOT
+                ## Pipeline Failed
+
+                ### Summary
+
+                The $${metric.display_name} of the $${resource.type} ${each.key}
+                in the project $${resource.project} has failed,
+
+                ### Additional resource information
+
+                Pipeline Name: ${each.key}
+            EOT
+    mime_type = "text/markdown"
+    subject   = "Cloud build Pipeline ${each.key} has Failed"
+  }
+}
+
+resource "google_monitoring_alert_policy" "success" {
+  for_each = var.gcp_deployment ? local.trigger : {}
+
+  display_name = "${each.key}-success-alert"
+  combiner     = "OR"
+  conditions {
+    display_name = "success-alert"
+    condition_threshold {
+      threshold_value = 0.5
+      filter          = "resource.type = \"build\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.success[each.key].id}\""
+      duration        = "0s"
+      comparison      = "COMPARISON_GT"
+      aggregations {
+        alignment_period   = "60s"
+        per_series_aligner = "ALIGN_COUNT"
+      }
+      trigger {
+        count   = 1
+        percent = 0
+      }
+    }
+  }
+  # severity = "ERROR"
+  notification_channels = google_monitoring_notification_channel.this[*].id
+  alert_strategy {
+    auto_close = "1800s"
+    notification_channel_strategy {
+      notification_channel_names = google_monitoring_notification_channel.this[*].id
+      renotify_interval          = "3600s"
+    }
+  }
+
+  documentation {
+    content   = <<-EOT
+                ## Pipeline succeed
+
+                ### Summary
+
+                The $${metric.display_name} of the $${resource.type} ${each.key}
+                in the project $${resource.project} has runs successfully,
+
+                ### Additional resource information
+
+                Pipeline Name: ${each.key}
+            EOT
+    mime_type = "text/markdown"
+    subject   = "Cloud build Pipeline ${each.key} runs successfully"
+  }
+}

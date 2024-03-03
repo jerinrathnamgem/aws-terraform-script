@@ -189,3 +189,15 @@ variable "app_installation_id" {
   description = "The installation ID of your Cloud Build GitHub app. Your installation ID can be found in the URL of your Cloud Build GitHub App. In the following URL, https://github.com/settings/installations/1234567, the installation ID is the numerical value 1234567."
   default     = null
 }
+
+variable "gcp_email_display_names" {
+  type        = list(string)
+  description = "List of names for email IDs for Alert Notifications"
+  default     = []
+}
+
+variable "gcp_email_addresses" {
+  type        = list(string)
+  description = "list of email IDs for notification."
+  default     = []
+}
