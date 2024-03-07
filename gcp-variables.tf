@@ -75,7 +75,7 @@ variable "gcp_max_node_count" {
 variable "gcp_node_disk_size" {
   type        = number
   description = "Node Storage size GCP cluster"
-  default     = 20
+  default     = 30
 }
 
 variable "gcp_node_disk_type" {
@@ -87,7 +87,7 @@ variable "gcp_node_disk_type" {
 variable "gcp_node_type" {
   type        = string
   description = "Type of the node for GCP cluster"
-  default     = "e2-medium"
+  default     = "e2-standard-2"
 }
 
 variable "gcp_autoscaling_cpu" {
@@ -130,10 +130,16 @@ variable "gcp_cluster_version" {
   default     = "1.27.8-gke.1067004"
 }
 
-variable "cluster_network_cidr" {
+variable "cluster_master_network_cidr" {
   type        = string
   description = "The IP range in CIDR notation to use for the hosted master network."
   default     = "10.30.30.0/28"
+}
+
+variable "services_ipv4_cidr_block" {
+  type        = string
+  description = "The IP range in CIDR notation to use for the pods network."
+  default     = "10.132.0.0/20"
 }
 
 variable "gcp_kubernetes_dashboard_service_type" {
@@ -181,7 +187,13 @@ variable "gcp_github_token" {
 variable "gcp_manifest_files" {
   type        = list(string)
   description = "list of File path of your Kubernetes manifest file in each GitHub Repositories. For multiple pipelines should need multiple values."
-  default     = ["manifests/deployment.yml"]
+  default     = ["manifests/"]
+}
+
+variable "gcp_namespace" {
+  type        = string
+  description = "namespace for gcp kubernetes cluster"
+  default     = null
 }
 
 variable "app_installation_id" {
@@ -193,7 +205,7 @@ variable "app_installation_id" {
 variable "enable_gcp_notification" {
   type        = bool
   description = "Whether to enable Pipeline notification in GCP"
-  default     = true
+  default     = false
 }
 
 variable "gcp_email_display_names" {
@@ -207,3 +219,9 @@ variable "gcp_email_addresses" {
   description = "list of email IDs for notification."
   default     = []
 }
+
+# variable "gcp_k8s_app_labels" {
+#   type        = list(string)
+#   description = "list of labels of deployments. For every pipeline, need seperate labels"
+#   default     = ["app=myapp"] # ["app=myapp1", "app=myapp1"] # if you have 2 pipelines
+# }

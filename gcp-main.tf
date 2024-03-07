@@ -93,7 +93,8 @@ resource "google_container_cluster" "standard" {
     }
   }
   ip_allocation_policy {
-    stack_type = "IPV4"
+    stack_type               = "IPV4"
+    services_ipv4_cidr_block = var.services_ipv4_cidr_block
     pod_cidr_overprovision_config {
       disabled = false
     }
@@ -155,7 +156,7 @@ resource "google_container_cluster" "standard" {
     enable_private_nodes = true
 
     # The IP range in CIDR notation to use for the hosted master network.
-    master_ipv4_cidr_block = var.cluster_network_cidr
+    master_ipv4_cidr_block = var.cluster_master_network_cidr
 
     # Whether the cluster master is accessible globally or not.
     master_global_access_config {
@@ -233,6 +234,18 @@ resource "kubernetes_secret_v1" "gcp" {
   }
 
   type = "kubernetes.io/service-account-token"
+}
+
+resource "kubernetes_namespace" "this" {
+  for_each = var.gcp_deployment ? toset([var.gcp_namespace]) : []
+
+  metadata {
+    annotations = {
+      name = each.value
+    }
+
+    name = each.value
+  }
 }
 
 locals {
@@ -357,7 +370,7 @@ resource "google_cloudbuild_trigger" "this" {
 
     step {
       name = "gcr.io/cloud-builders/docker"
-      args = ["build", "-t", "${local.image}/${var.gcp_pipeline_names[count.index]}", "."]
+      args = ["build", "-t", "${local.image}/${var.gcp_pipeline_names[count.index]}:latest", "-t", "${local.image}/${var.gcp_pipeline_names[count.index]}:$SHORT_SHA", "."]
     }
 
     step {
@@ -366,25 +379,32 @@ resource "google_cloudbuild_trigger" "this" {
     }
 
     step {
-      name = "gcr.io/cloud-builders/gke-deploy"
-      args = ["run", "--filename", var.gcp_manifest_files[count.index], "--cluster", var.gcp_name, "--location", var.gcp_region]
+      name = "gcr.io/cloud-builders/docker"
+      args = ["push", "${local.image}/${var.gcp_pipeline_names[count.index]}:$SHORT_SHA"]
     }
 
     # step {
-    #   name = "gcr.io/cloud-builders/gcloud"
-    #   args = ["run", "deploy", google_cloud_run_service.this.name, "--image", "${local.image}:latest", "--region", var.region, "--platform", "managed", "-q"]
+    #   name = "gcr.io/cloud-builders/kubectl"
+    #   args = ["delete", "pods", "--all", "-n", var.gcp_namespace] #["delete", "pods", "-l", var.gcp_k8s_app_labels[count.index], "-n", var.gcp_namespace]
+    #   env = [
+    #     "CLOUDSDK_COMPUTE_REGION=${var.gcp_region}",
+    #     "CLOUDSDK_CONTAINER_CLUSTER=${var.gcp_name}"
+    #   ]
     # }
+
+    step {
+      name = "gcr.io/cloud-builders/gke-deploy"
+      args = ["run", "--filename", var.gcp_manifest_files[count.index], "--image", "${local.image}/${var.gcp_pipeline_names[count.index]}:$SHORT_SHA", "--cluster", var.gcp_name, "--location", var.gcp_region]
+    }
   }
 
   depends_on = [
-    google_cloudbuildv2_repository.this
+    kubernetes_namespace.this
   ]
 }
 
 # Cloud Build Role
 resource "google_project_iam_member" "cloudbuild_roles" {
-  # count = var.gcp_deployment ? 1 : 0
-
   for_each = var.gcp_deployment ? toset(["roles/run.admin", "roles/iam.serviceAccountUser", "roles/container.developer"]) : []
 
   project = var.project_id
@@ -398,10 +418,18 @@ resource "google_project_iam_member" "cloudbuild_roles" {
 
 # IP Address for Ingress
 resource "google_compute_global_address" "ingress" {
-  count = 0 # var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
+  count = var.gcp_deployment ? 1 : 0
 
-  name         = "${var.gcp_name}-${count.index}-web-ip"
+  name         = "${var.gcp_name}-web-ip"
   address_type = "EXTERNAL"
+}
+
+data "google_compute_global_address" "ingress" {
+  count = var.gcp_deployment ? 1 : 0
+
+  name = "${var.gcp_name}-web-ip"
+
+  depends_on = [google_compute_global_address.ingress]
 }
 
 # Pipeline Notification
@@ -492,17 +520,17 @@ resource "google_monitoring_alert_policy" "error" {
 
   documentation {
     content   = <<-EOT
-                ## Pipeline Failed
+      ## Pipeline Failed
 
-                ### Summary
+      ### Summary
 
-                The $${metric.display_name} of the $${resource.type} ${each.key}
-                in the project $${resource.project} has failed,
+      The $${metric.display_name} of the $${resource.type} ${each.key}
+      in the project $${resource.project} has failed,
 
-                ### Additional resource information
+      ### Additional resource information
 
-                Pipeline Name: ${each.key}
-            EOT
+      Pipeline Name: ${each.key}
+    EOT
     mime_type = "text/markdown"
     subject   = "Cloud build Pipeline ${each.key} has Failed"
   }
@@ -542,17 +570,17 @@ resource "google_monitoring_alert_policy" "success" {
 
   documentation {
     content   = <<-EOT
-                ## Pipeline succeed
+      ## Pipeline succeed
 
-                ### Summary
+      ### Summary
 
-                The $${metric.display_name} of the $${resource.type} ${each.key}
-                in the project $${resource.project} has runs successfully,
+      The $${metric.display_name} of the $${resource.type} ${each.key}
+      in the project $${resource.project} has runs successfully,
 
-                ### Additional resource information
+      ### Additional resource information
 
-                Pipeline Name: ${each.key}
-            EOT
+      Pipeline Name: ${each.key}
+    EOT
     mime_type = "text/markdown"
     subject   = "Cloud build Pipeline ${each.key} runs successfully"
   }
