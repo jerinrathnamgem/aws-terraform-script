@@ -3,3 +3,5 @@
 *.bk
 *tfvars
 *tfstate*
+*.bak
+*.lua

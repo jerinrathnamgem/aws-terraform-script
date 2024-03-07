@@ -1,5 +1,11 @@
 ######################################### MAIN ##############################################
 
+variable "aws_deployment" {
+  type        = bool
+  description = "Whether to deploy resources in AWS cloud"
+  default     = false # this will create resources in AWS
+}
+
 variable "access_key" {
   type        = string
   sensitive   = true
@@ -53,6 +59,12 @@ variable "alb_subnet_ids" {
 }
 
 ################################## CODE PIPELINE #############################################
+
+variable "create_pipeline" {
+  type        = bool
+  description = "Whether to create pipeline or not"
+  default     = true
+}
 
 variable "codebuild_compute_type" {
   type        = string

@@ -136,25 +136,58 @@ resource "aws_ecs_task_definition" "this" {
   network_mode             = var.network_mode
   requires_compatibilities = [var.task_launch_type]
 
+  dynamic "ephemeral_storage" {
+    for_each = length(var.task_ephemeral_storage) > 0 ? [1] : []
+
+    content {
+      size_in_gib = length(var.task_ephemeral_storage) > 0 ? var.task_ephemeral_storage[count.index] : null
+    }
+  }
+
+  dynamic "volume" {
+    for_each = length(var.task_volume) > 0 ? [1] : []
+
+    content {
+      efs_volume_configuration {
+        file_system_id          = var.task_volume[0]["file_system_id"][0] #[count.index]
+        transit_encryption      = var.task_volume[0]["transit_encryption"]
+        transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
+        #root_directory          = var.task_volume[0]["root_directory"][count.index]
+        authorization_config {
+          access_point_id = var.task_volume[0]["authorization_config_access_point_id"] == null ? null : var.task_volume[0]["authorization_config_access_point_id"][count.index]
+          iam             = var.task_volume[0]["authorization_config_iam"]
+        }
+      }
+
+      name      = var.task_volume[0]["name"][count.index]
+      host_path = try(var.task_volume[0]["host_path"][count.index], null)
+    }
+  }
+
   container_definitions = jsonencode(
     [
       {
-        name      = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
-        image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        name  = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
+        image = length(var.container_images) > 0 ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        # image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         cpu       = length(var.container_cpu) == 0 ? null : length(var.container_cpu) > 1 ? var.container_cpu[count.index] : var.container_cpu[0]
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
 
-        command          = var.task_commands != null ? var.task_commands[count.index] : null
-        credentialSpecs  = var.task_credential_specs != null ? var.task_credential_specs[count.index] : null
-        entrypoint       = var.task_entry_points != null ? var.task_entry_points[count.index] : null
-        environmentFiles = var.task_env_files != null ? var.task_env_files[count.index] : null
-        environment      = var.task_env_vars != null ? var.task_env_vars[count.index] : null
-        healthCheck      = var.task_health_check != null ? var.task_health_check[count.index] : null
-        hostname         = var.task_host_name != null ? var.task_host_name[count.index] : null
-        mountPoints      = var.task_mount_point != null ? var.task_mount_point[count.index] : null
-        volumesFrom      = var.task_volumes_from != null ? var.task_volumes_from[count.index] : null
-        volume           = var.task_volume != null ? var.task_volume[count.index] : null
+        command          = length(var.task_commands) > 0 ? var.task_commands[count.index] : null
+        credentialSpecs  = length(var.task_credential_specs) > 0 ? var.task_credential_specs[count.index] : null
+        entrypoint       = length(var.task_entry_points) > 0 ? var.task_entry_points[count.index] : null
+        environmentFiles = length(var.task_env_files) > 0 ? var.task_env_files[count.index] : null
+        environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
+        healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
+        hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
+        mountPoints = length(var.task_containerPath) == 0 ? null : [{
+          containerPath = var.task_containerPath[count.index]
+          readOnly      = false
+          sourceVolume  = length(var.task_volume) > 0 ? var.task_volume[0]["name"][count.index] : null
+        }]
+        volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
+        #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
 
         logConfiguration = {
           logDriver = var.container_log_driver
@@ -201,23 +234,58 @@ resource "aws_ecs_task_definition" "ignore_changes" {
   network_mode             = var.network_mode
   requires_compatibilities = [var.task_launch_type]
 
+  dynamic "ephemeral_storage" {
+    for_each = length(var.task_ephemeral_storage) > 0 ? [1] : []
+
+    content {
+      size_in_gib = length(var.task_ephemeral_storage) > 0 ? var.task_ephemeral_storage[count.index] : null
+    }
+  }
+
+  dynamic "volume" {
+    for_each = length(var.task_volume) > 0 ? [1] : []
+
+    content {
+      efs_volume_configuration {
+        file_system_id          = var.task_volume[0]["file_system_id"][0] #[count.index]
+        transit_encryption      = var.task_volume[0]["transit_encryption"]
+        transit_encryption_port = var.task_volume[0]["transit_encryption_port"]
+        #root_directory          = var.task_volume[0]["root_directory"][count.index]
+        authorization_config {
+          access_point_id = var.task_volume[0]["authorization_config_access_point_id"] == null ? null : var.task_volume[0]["authorization_config_access_point_id"][count.index]
+          iam             = var.task_volume[0]["authorization_config_iam"]
+        }
+      }
+
+      name      = var.task_volume[0]["name"][count.index]
+      host_path = try(var.task_volume[0]["host_path"][count.index], null)
+    }
+  }
+
   container_definitions = jsonencode(
     [
       {
-        name      = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
-        image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        name  = var.container_name != null ? var.container_name[count.index] : var.name[count.index]
+        image = length(var.container_images) > 0 ? "${var.container_images[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
+        # image     = var.create_ecr_repository ? "${aws_ecr_repository.this[count.index].repository_url}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}" : "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/${var.ecr_repo_names[count.index]}:${length(var.image_tags) > 1 ? var.image_tags[count.index] : var.image_tags[0]}"
         cpu       = length(var.container_cpu) == 0 ? null : length(var.container_cpu) > 1 ? var.container_cpu[count.index] : var.container_cpu[0]
         memory    = length(var.container_memory) == 0 ? null : length(var.container_memory) > 1 ? var.container_memory[count.index] : var.container_memory[0]
         essential = true
 
-        command          = var.task_commands
-        entrypoint       = var.task_entry_points
-        environmentFiles = var.task_env_files
-        healthCheck      = var.task_health_check
-        hostname         = var.task_host_name
-        mountPoints      = var.task_mount_point
-        volumesFrom      = var.task_volumes_from
-        volume           = var.task_volume
+        command          = length(var.task_commands) > 0 ? var.task_commands[count.index] : null
+        credentialSpecs  = length(var.task_credential_specs) > 0 ? var.task_credential_specs[count.index] : null
+        entrypoint       = length(var.task_entry_points) > 0 ? var.task_entry_points[count.index] : null
+        environmentFiles = length(var.task_env_files) > 0 ? var.task_env_files[count.index] : null
+        environment      = length(var.task_env_vars) > 0 ? var.task_env_vars[count.index] : null
+        healthCheck      = length(var.task_health_check) > 0 ? var.task_health_check[count.index] : null
+        hostname         = length(var.task_host_name) > 0 ? var.task_host_name[count.index] : null
+        mountPoints = length(var.task_containerPath) == 0 ? null : [{
+          containerPath = var.task_containerPath[count.index]
+          readOnly      = false
+          sourceVolume  = length(var.task_volume) > 0 ? var.task_volume[0]["name"][count.index] : null
+        }]
+        volumesFrom = length(var.task_volumes_from) > 0 ? var.task_volumes_from[count.index] : null
+        #volume           = length(var.task_volume) > 0 ? var.task_volume[count.index] : null
 
         logConfiguration = {
           logDriver = var.container_log_driver
@@ -227,8 +295,6 @@ resource "aws_ecs_task_definition" "ignore_changes" {
             awslogs-stream-prefix = "ecs"
           }
         }
-
-        environment = var.task_env_vars
 
         portMappings = [
           {
@@ -258,7 +324,9 @@ resource "aws_ecs_task_definition" "ignore_changes" {
       cpu,
       memory,
       network_mode,
-      requires_compatibilities
+      requires_compatibilities,
+      ephemeral_storage,
+      volume
     ]
   }
 
@@ -419,7 +487,7 @@ resource "aws_iam_role" "this" {
 
   count = var.ecs_task_role_name == null ? 1 : 0
 
-  name = "${var.name[0]}-ecs-role"
+  name = "${var.name[0]}-ecs"
 
   assume_role_policy = jsonencode(
     {
@@ -445,7 +513,37 @@ resource "aws_iam_role_policy" "this" {
 
   count = var.ecs_task_role_name == null ? 1 : 0
 
-  name = "${var.name[0]}-ecs-policy"
+  name = "${var.name[0]}-ecs-cwlog"
+  role = aws_iam_role.this[0].id
+
+  policy = jsonencode(
+    {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Action = [
+            "elasticfilesystem:*"
+          ]
+          Effect   = "Allow"
+          Resource = "*"
+        },
+        {
+          Action = [
+            "logs:CreateLogStream",
+            "logs:PutLogEvents"
+          ]
+          Effect   = "Allow"
+          Resource = var.create_cloudwatch_log_group ? concat(aws_cloudwatch_log_group.this[*].arn, formatlist("%s:*", aws_cloudwatch_log_group.this[*].arn)) : ["*"]
+        }
+      ]
+    }
+  )
+}
+resource "aws_iam_role_policy" "ecr" {
+
+  count = var.ecs_task_role_name == null && var.create_ecr_repository ? 1 : 0
+
+  name = "${var.name[0]}-ecs-ecr"
   role = aws_iam_role.this[0].id
 
   policy = jsonencode(
@@ -467,14 +565,6 @@ resource "aws_iam_role_policy" "this" {
           ]
           Effect   = "Allow"
           Resource = "*"
-        },
-        {
-          Action = [
-            "logs:CreateLogStream",
-            "logs:PutLogEvents"
-          ]
-          Effect   = "Allow"
-          Resource = var.create_cloudwatch_log_group ? concat(aws_cloudwatch_log_group.this[*].arn, formatlist("%s:*", aws_cloudwatch_log_group.this[*].arn)) : ["*"]
         }
       ]
     }

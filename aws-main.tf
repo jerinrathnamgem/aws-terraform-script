@@ -1,36 +1,39 @@
 ################### DATA SOURCES & LOCALS ###############################
 
 data "aws_subnets" "this" {
+  count = var.aws_deployment ? 1 : 0
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
   }
 }
 
-data "aws_caller_identity" "this" {}
+data "aws_caller_identity" "this" {
+  count = var.aws_deployment ? 1 : 0
+}
 
 data "aws_eks_cluster_auth" "this" {
-  count = var.create_eks_deployment ? 1 : 0
+  count = var.aws_deployment && var.create_eks_deployment ? 1 : 0
   name  = var.eks_cluster_name
 }
 
 locals {
-  account_id = data.aws_caller_identity.this.account_id
-  s3_bucket  = var.create_s3_bucket ? aws_s3_bucket.this[0].id : var.s3_bucket_name
+  account_id = one(data.aws_caller_identity.this[*].account_id)
+  s3_bucket  = var.create_s3_bucket ? one(aws_s3_bucket.this[*].id) : var.s3_bucket_name
 }
 
 ########################### ECS CLUSTER ##############################
 
 module "ecs" {
   source = "./modules/ecs-cluster"
-  count  = var.create_ecs_deployment ? 1 : 0
+  count  = var.aws_deployment && var.create_ecs_deployment ? 1 : 0
 
   cluster_name              = var.cluster_name
   create_cluster            = var.create_cluster
   name                      = var.ecs_service_names
   port                      = var.ecs_ports
   security_groups           = module.security-group-ecs[*].security_group_id
-  subnet_ids                = var.ecs_subnet_ids == null ? data.aws_subnets.this.ids : var.ecs_subnet_ids
+  subnet_ids                = var.ecs_subnet_ids == null ? one(data.aws_subnets.this[*].ids) : var.ecs_subnet_ids
   load_balancing            = var.load_balancer_name != null ? true : false
   assign_public_ip          = var.assign_public_ip
   target_group_arns         = one(module.load-balancer[*].target_group_arn)
@@ -46,14 +49,26 @@ module "ecs" {
   task_credential_specs     = var.task_credential_specs
   task_entry_points         = var.task_entry_points
   task_health_check         = var.task_health_check
-  task_mount_point          = var.task_mount_point
-  task_volume               = var.task_volume
   task_volumes_from         = var.task_volumes_from
+  task_ephemeral_storage    = var.task_ephemeral_storage
+  task_containerPath        = var.container_paths
+  create_ecr_repository     = var.create_pipeline
+  container_images          = var.container_images
+  image_tags                = var.image_tags
+
+  task_volume = !var.create_efs && var.efs_file_system_id == null ? [] : [{
+    file_system_id                       = [var.create_efs ? one(aws_efs_file_system.this[*].id) : var.efs_file_system_id]
+    name                                 = var.ecs_service_names
+    transit_encryption                   = "ENABLED"
+    authorization_config_access_point_id = aws_efs_access_point.this[*].id
+    authorization_config_iam             = "ENABLED"
+    #host_path                            = [] #localpath
+  }]
 }
 
 module "security-group-ecs" {
   source = "./modules/security-group"
-  count  = var.create_ecs_deployment ? length(var.ecs_service_names) : 0
+  count  = var.aws_deployment && var.create_ecs_deployment ? length(var.ecs_service_names) : 0
 
   name                                  = "${var.ecs_service_names[count.index]}-ECS"
   vpc_id                                = var.vpc_id
@@ -65,7 +80,7 @@ module "security-group-ecs" {
 
 module "ec2" {
   source = "./modules/ec2"
-  count  = var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
+  count  = var.aws_deployment && var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
 
   name               = var.ec2_name
   amiID              = var.ami_id
@@ -83,7 +98,7 @@ module "ec2" {
 
 module "security-group-ec2" {
   source = "./modules/security-group"
-  count  = var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
+  count  = var.aws_deployment && var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
 
   name                                  = "${var.ec2_name}-EC2"
   vpc_id                                = var.vpc_id
@@ -93,7 +108,7 @@ module "security-group-ec2" {
 }
 
 resource "time_sleep" "ec2" {
-  count      = var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
+  count      = var.aws_deployment && var.create_ec2_deployment && var.create_ec2_server ? 1 : 0
   depends_on = [module.ec2]
 
   create_duration = "60s"
@@ -102,13 +117,13 @@ resource "time_sleep" "ec2" {
 ######################## EKS CLUSTER #####################################
 
 module "eks-cluster" {
-  count  = var.create_eks_deployment && var.create_cluster ? 1 : 0
+  count  = var.aws_deployment && var.create_eks_deployment && var.create_cluster ? 1 : 0
   source = "./modules/eks-cluster"
 
   name                            = var.eks_cluster_name
   instance_types                  = [var.eks_node_type]
-  subnet_ids                      = var.eks_subnet_ids == null ? slice(data.aws_subnets.this.ids, 0, 2) : var.eks_subnet_ids
-  node_subnet_ids                 = var.eks_node_subnet_ids == null ? data.aws_subnets.this.ids : var.eks_node_subnet_ids
+  subnet_ids                      = var.eks_subnet_ids == null ? slice(one(data.aws_subnets.this[*].ids), 0, 2) : var.eks_subnet_ids
+  node_subnet_ids                 = var.eks_node_subnet_ids == null ? one(data.aws_subnets.this[*].ids) : var.eks_node_subnet_ids
   vpc_id                          = var.vpc_id
   myip_ssh                        = var.node_ssh_cidr_ips
   private_key                     = var.node_private_key_name
@@ -129,7 +144,7 @@ module "eks-cluster" {
 ###################################### CONFIG MAP ################################################
 
 resource "kubernetes_config_map_v1_data" "aws-auth" {
-  count = var.create_eks_deployment && var.create_cluster ? 1 : 0
+  count = var.aws_deployment && var.create_eks_deployment && var.create_cluster ? 1 : 0
 
   metadata {
     name      = "aws-auth"
@@ -164,7 +179,7 @@ resource "kubernetes_config_map_v1_data" "aws-auth" {
 
 module "ecs-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_ecs_deployment ? length(var.ecs_service_names) : 0
+  count  = var.aws_deployment && var.create_pipeline && var.create_ecs_deployment ? length(var.ecs_service_names) : 0
 
   ecs_deployment       = var.create_ecs_deployment
   ec2_deployment       = var.create_ec2_deployment
@@ -201,7 +216,7 @@ module "ecs-pipeline" {
 
 module "ec2-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_ec2_deployment ? 1 : 0
+  count  = var.aws_deployment && var.create_pipeline && var.create_ec2_deployment ? 1 : 0
 
   ecs_deployment     = var.create_ecs_deployment
   ec2_deployment     = var.create_ec2_deployment
@@ -228,7 +243,7 @@ module "ec2-pipeline" {
 
 module "eks-pipeline" {
   source = "./modules/code-pipeline"
-  count  = var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
+  count  = var.aws_deployment && var.create_pipeline && var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
 
   ecs_deployment       = var.create_ecs_deployment
   ec2_deployment       = var.create_ec2_deployment
@@ -270,7 +285,7 @@ module "eks-pipeline" {
 }
 
 resource "aws_ecr_repository" "this" {
-  count = var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
+  count = var.aws_deployment && var.create_pipeline && var.create_eks_deployment ? length(var.eks_pipeline_names) : 0
 
   name                 = lower(var.eks_pipeline_names[count.index])
   force_delete         = true
@@ -289,7 +304,7 @@ resource "aws_ecr_repository" "this" {
 
 module "load-balancer" {
   source = "./modules/load-balancer"
-  count  = var.load_balancer_name != null ? 1 : 0
+  count  = var.aws_deployment && var.load_balancer_name != null ? 1 : 0
 
   certificate_arn       = var.certificate_arn
   host_names            = var.host_names
@@ -299,7 +314,7 @@ module "load-balancer" {
   load_balancer_name    = var.load_balancer_name
   ports                 = var.create_ec2_deployment ? [var.ec2_port] : var.ecs_ports
   security_groups       = [module.security-group-lb[0].security_group_id]
-  subnet_ids            = var.alb_subnet_ids == null ? data.aws_subnets.this.ids : var.alb_subnet_ids
+  subnet_ids            = var.alb_subnet_ids == null ? one(data.aws_subnets.this[*].ids) : var.alb_subnet_ids
   vpc_id                = var.vpc_id
   instance_id           = one(module.ec2[*].instance_id)
   target_type           = [var.create_ec2_deployment ? "instance" : "ip"]
@@ -310,7 +325,7 @@ module "load-balancer" {
 
 module "security-group-lb" {
   source = "./modules/security-group"
-  count  = var.load_balancer_name != null ? 1 : 0
+  count  = var.aws_deployment && var.load_balancer_name != null ? 1 : 0
 
   name      = "${var.load_balancer_name}-LB"
   vpc_id    = var.vpc_id

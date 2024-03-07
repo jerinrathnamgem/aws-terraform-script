@@ -14,15 +14,21 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  host                   = one(module.eks-cluster[*].endpoint)
-  cluster_ca_certificate = var.create_eks_deployment ? base64decode(module.eks-cluster[0].cluster_certificate_authority_data) : null
-  token                  = one(data.aws_eks_cluster_auth.this[*].token)
+  host                   = var.aws_deployment ? one(module.eks-cluster[*].endpoint) : "https://${one(google_container_cluster.standard[*].endpoint)}"
+  cluster_ca_certificate = var.gcp_deployment ? base64decode(one(google_container_cluster.standard[*].master_auth.0.cluster_ca_certificate)) : var.create_eks_deployment ? base64decode(module.eks-cluster[0].cluster_certificate_authority_data) : null
+  token                  = var.aws_deployment ? one(data.aws_eks_cluster_auth.this[*].token) : one(data.google_client_config.provider[*].access_token)
 }
 
 provider "helm" {
   kubernetes {
-    host                   = one(module.eks-cluster[*].endpoint)
-    cluster_ca_certificate = var.create_eks_deployment ? base64decode(module.eks-cluster[0].cluster_certificate_authority_data) : null
-    token                  = one(data.aws_eks_cluster_auth.this[*].token)
+    host                   = var.aws_deployment ? one(module.eks-cluster[*].endpoint) : "https://${one(google_container_cluster.standard[*].endpoint)}"
+    cluster_ca_certificate = var.gcp_deployment ? base64decode(one(google_container_cluster.standard[*].master_auth.0.cluster_ca_certificate)) : var.create_eks_deployment ? base64decode(module.eks-cluster[0].cluster_certificate_authority_data) : null
+    token                  = var.aws_deployment ? one(data.aws_eks_cluster_auth.this[*].token) : one(data.google_client_config.provider[*].access_token)
   }
+}
+
+provider "google" {
+  project     = var.project_id
+  region      = var.region
+  credentials = var.credentials
 }
