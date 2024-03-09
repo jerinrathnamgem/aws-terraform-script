@@ -93,8 +93,8 @@ resource "google_container_cluster" "standard" {
     }
   }
   ip_allocation_policy {
-    stack_type               = "IPV4"
-    services_ipv4_cidr_block = var.services_ipv4_cidr_block
+    stack_type = "IPV4"
+    # services_ipv4_cidr_block = var.services_ipv4_cidr_block
     pod_cidr_overprovision_config {
       disabled = false
     }
@@ -186,6 +186,7 @@ resource "helm_release" "gcp_kubernetes_dashboard" {
   repository = "https://kubernetes.github.io/dashboard"
   chart      = "kubernetes-dashboard"
   namespace  = "kube-system"
+  version    = "6.0.8"
 
   values = [
     templatefile("./kube-dashboard.yml.tpl", {

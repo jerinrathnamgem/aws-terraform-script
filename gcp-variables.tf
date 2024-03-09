@@ -136,11 +136,11 @@ variable "cluster_master_network_cidr" {
   default     = "10.30.30.0/28"
 }
 
-variable "services_ipv4_cidr_block" {
-  type        = string
-  description = "The IP range in CIDR notation to use for the pods network."
-  default     = "10.132.0.0/20"
-}
+# variable "services_ipv4_cidr_block" {
+#   type        = string
+#   description = "The IP range in CIDR notation to use for the pods network."
+#   default     = "10.132.0.0/20"
+# }
 
 variable "gcp_kubernetes_dashboard_service_type" {
   type        = string
