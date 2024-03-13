@@ -15,5 +15,5 @@ output "GCP_docker_image" {
 
 output "GCP_loadbalancer_ip" {
   description = "Name ad IP address of the Ingress Loadbalancer"
-  value       = zipmap(["${var.gcp_name}-web-ip"], data.google_compute_global_address.ingress[*].address)
+  value       = zipmap(var.gcp_pipeline_names, data.google_compute_global_address.ingress[*].address)
 }

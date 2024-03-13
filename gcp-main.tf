@@ -419,16 +419,16 @@ resource "google_project_iam_member" "cloudbuild_roles" {
 
 # IP Address for Ingress
 resource "google_compute_global_address" "ingress" {
-  count = var.gcp_deployment ? 1 : 0
+  count = var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
 
-  name         = "${var.gcp_name}-web-ip"
+  name         = var.gcp_pipeline_names[count.index]
   address_type = "EXTERNAL"
 }
 
 data "google_compute_global_address" "ingress" {
-  count = var.gcp_deployment ? 1 : 0
+  count = var.gcp_deployment ? length(var.gcp_pipeline_names) : 0
 
-  name = "${var.gcp_name}-web-ip"
+  name = var.gcp_pipeline_names[count.index]
 
   depends_on = [google_compute_global_address.ingress]
 }
