@@ -28,7 +28,7 @@ provider "helm" {
 }
 
 provider "google" {
-  project     = var.project_id
+  project     = var.project_id != null ? var.project_id : "test-project-123456"
   region      = var.region
   credentials = var.credentials
 }

@@ -10,9 +10,8 @@ resource "google_project_service" "this" {
 }
 
 data "google_compute_zones" "this" {
-  count   = var.gcp_deployment ? 1 : 0
-  region  = var.region
-  project = var.project_id
+  count  = var.gcp_deployment ? 1 : 0
+  region = var.region
 }
 
 data "google_client_config" "provider" {
@@ -250,7 +249,7 @@ resource "kubernetes_namespace" "this" {
 }
 
 locals {
-  image = "${var.gcp_region}-docker.pkg.dev/${var.project_id}/${var.gcp_name}-repo"
+  image = "${var.gcp_region}-docker.pkg.dev/${var.project_id != null ? var.project_id : ""}/${var.gcp_name != null ? var.gcp_name : ""}-repo"
 }
 
 # Artifact Registry Repository
